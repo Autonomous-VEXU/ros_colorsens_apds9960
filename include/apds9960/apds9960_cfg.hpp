@@ -1,0 +1,29 @@
+#include <chrono>
+#include <cstdint>
+using namespace std::chrono_literals;
+
+/**
+ * @brief How often the node will read and publish the IMU data
+ */
+constexpr std::chrono::duration PUBLISH_PERIOD = 100ms;
+
+/**
+ * @brief Linux device path to the i2c bus
+ */
+constexpr const char *I2C_DEVICE_PATH = "/dev/i2c-7";
+
+/**
+ * @brief Topic name that the node will publish on
+ */
+constexpr const char *ROS_TOPIC_NAME = "ColorSensor/Data";
+
+/**
+ * @brief Frame ID that the node will publish with
+ */
+constexpr const char *ROS_FRAME_ID = "apds9960_colorsensor";
+
+/**
+ * @brief The device I2C address of the APDS9960 chip. Should be 0x39,
+ * unless you have an I2C address translator or multiplexer.
+ */
+constexpr uint8_t I2C_DEVICE_ADDR = 0x39;
