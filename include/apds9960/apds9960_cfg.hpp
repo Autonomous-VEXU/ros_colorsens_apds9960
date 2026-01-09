@@ -1,3 +1,4 @@
+#include "driver_apds9960.h"
 #include <chrono>
 #include <cstdint>
 using namespace std::chrono_literals;
@@ -37,3 +38,10 @@ constexpr uint8_t I2C_DEVICE_ADDR = 0x39;
  * Range is between 2.78ms-712ms.
  */
 constexpr std::chrono::milliseconds ADC_INTEGRATION_TIME = 100ms;
+
+/**
+ * @brief The gain applied to the ALS color sensor readings. Range
+ * is between 1X and 64X.
+ */
+constexpr apds9960_als_color_gain_t COLOR_SENSOR_GAIN =
+    APDS9960_ALS_COLOR_GAIN_64X;

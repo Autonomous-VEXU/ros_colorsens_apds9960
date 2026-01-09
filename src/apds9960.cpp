@@ -116,13 +116,26 @@ private:
         apds9960_set_adc_integration_time(&driver_handle, adc_int_time_reg),
         "set adc integration time");
 
-    // Let settings settle
-    std::this_thread::sleep_for(1s);
+    DRIVER_CONFIG_ERR_HANDLE(
+        apds9960_set_als_color_gain(&driver_handle, COLOR_SENSOR_GAIN),
+        "set color sensor gain");
+
+    // Let it settle
+    // TODO: Maybe replace with a loop to check for AVALID & PVALID
+    std::this_thread::sleep_for(500ms);
 
     RCLCPP_INFO(this->get_logger(), "Successfully configured APDS9960");
   }
 
   std::unique_ptr<apds9960::msg::ColorProximity> make_message() {
+    uint8_t apds_status;
+    apds9960_get_status(&driver_handle, &apds_status);
+    if (!(apds_status & (1 << APDS9960_STATUS_AVALID))) {
+      RCLCPP_WARN(this->get_logger(), "AVALID is NOT set: Status = 0x%x",
+                  apds_status);
+      return nullptr;
+    }
+
     auto ret = std::make_unique<apds9960::msg::ColorProximity>();
     ret->header.stamp = this->get_clock()->now();
     ret->header.frame_id = ROS_FRAME_ID;
