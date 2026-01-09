@@ -27,3 +27,13 @@ constexpr const char *ROS_FRAME_ID = "apds9960_colorsensor";
  * unless you have an I2C address translator or multiplexer.
  */
 constexpr uint8_t I2C_DEVICE_ADDR = 0x39;
+
+/**
+ * @brief The duration over which the color reading ADCs will be
+ * integrated. If the readings arent sensitive enough, turn this
+ * value up. If the readings are oversensitive and saturating,
+ * turn this value down.
+ *
+ * Range is between 2.78ms-712ms.
+ */
+constexpr std::chrono::milliseconds ADC_INTEGRATION_TIME = 100ms;

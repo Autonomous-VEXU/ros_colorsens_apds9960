@@ -33,7 +33,8 @@
 namespace {
 
 template <std::unsigned_integral T> constexpr float uint_to_0_1_float(T val) {
-  return val / std::numeric_limits<T>::max();
+  return static_cast<float>(val) /
+         static_cast<float>(std::numeric_limits<T>::max());
 }
 
 } // namespace
@@ -70,6 +71,11 @@ public:
     });
   }
 
+  ~APDS9960Node() {
+    DRIVER_SET_CONF(POWER_ON, false, "power chip off");
+    RCLCPP_INFO(this->get_logger(), "Successfully powered down APDS9960");
+  }
+
 private:
   apds9960_handle_t driver_handle;
   rclcpp::TimerBase::SharedPtr ros_timer;
@@ -92,14 +98,28 @@ private:
       exit(1);
     }
 
-    // Power chip on
+    DRIVER_SET_CONF(POWER_ON, false, "power chip off for reset");
     DRIVER_SET_CONF(POWER_ON, true, "power chip on");
     DRIVER_SET_CONF(WAIT_ENABLE, false, "disable wait");
     DRIVER_SET_CONF(PROXIMITY_DETECT_ENABLE, true, "enable prox detection");
-    DRIVER_SET_CONF(ALS_ENABLE, false, "disable ambient light sensing");
+    DRIVER_SET_CONF(ALS_ENABLE, true, "enable color/ambient light sensor");
     DRIVER_SET_CONF(ALS_INTERRUPT_ENABLE, false, "disable ALS interrupt");
     DRIVER_SET_CONF(PROXIMITY_INTERRUPT_ENABLE, false, "disable prox intr");
     DRIVER_SET_CONF(GESTURE_ENABLE, false, "disable gesture recognition");
+
+    uint8_t adc_int_time_reg;
+    DRIVER_CONFIG_ERR_HANDLE(
+        apds9960_adc_integration_time_convert_to_register(
+            &driver_handle, ADC_INTEGRATION_TIME.count(), &adc_int_time_reg),
+        "convert adc integration time to reg");
+    DRIVER_CONFIG_ERR_HANDLE(
+        apds9960_set_adc_integration_time(&driver_handle, adc_int_time_reg),
+        "set adc integration time");
+
+    // Let settings settle
+    std::this_thread::sleep_for(1s);
+
+    RCLCPP_INFO(this->get_logger(), "Successfully configured APDS9960");
   }
 
   std::unique_ptr<apds9960::msg::ColorProximity> make_message() {
@@ -122,6 +142,10 @@ private:
                    "Aborting publish: Couldn't read prox, Error = 0x%x", res);
       return nullptr;
     }
+
+    RCLCPP_DEBUG(this->get_logger(),
+                 "raw data: r=%u, g=%u, b=%u, c=%u, prox=%u", r, g, b, c,
+                 proximity);
 
     ret->color.r = uint_to_0_1_float(r);
     ret->color.g = uint_to_0_1_float(g);
