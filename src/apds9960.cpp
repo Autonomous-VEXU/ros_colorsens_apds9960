@@ -40,24 +40,8 @@ template <std::unsigned_integral T> constexpr float uint_to_0_1_float(T val) {
 } // namespace
 
 class APDS9960Node : public rclcpp::Node {
-private:
-  // Have to be static because this crusty driver doesn't give you a
-  // void* context argument to its callbacks :/
-  inline static I2CDevice i2c_dev;
-
 public:
   APDS9960Node() : Node("apds9960_node") {
-    int i2c_fd = i2c_open(I2C_DEVICE_PATH);
-    if (i2c_fd < 0) {
-      RCLCPP_FATAL(this->get_logger(), "Could not open i2c device");
-      exit(1);
-    }
-
-    APDS9960Node::i2c_dev.bus = i2c_fd;
-    APDS9960Node::i2c_dev.addr = I2C_DEVICE_ADDR;
-    APDS9960Node::i2c_dev.iaddr_bytes = 1;
-    APDS9960Node::i2c_dev.page_bytes = 256;
-
     configure_driver();
 
     ros_publisher = this->create_publisher<apds9960::msg::ColorProximity>(
@@ -72,11 +56,12 @@ public:
   }
 
   ~APDS9960Node() {
-    DRIVER_SET_CONF(POWER_ON, false, "power chip off");
-    RCLCPP_INFO(this->get_logger(), "Successfully powered down APDS9960");
+    apds9960_deinit(&driver_handle);
+    RCLCPP_INFO(this->get_logger(), "Successfully deinit'ed APDS9960");
   }
 
 private:
+  I2CDevice i2c_dev;
   apds9960_handle_t driver_handle;
   rclcpp::TimerBase::SharedPtr ros_timer;
   rclcpp::Publisher<apds9960::msg::ColorProximity>::SharedPtr ros_publisher;
@@ -91,6 +76,7 @@ private:
     DRIVER_APDS9960_LINK_DEBUG_PRINT(&driver_handle, driver_debug_print);
     DRIVER_APDS9960_LINK_RECEIVE_CALLBACK(&driver_handle,
                                           driver_interrupt_callback);
+    DRIVER_APDS9960_LINK_CONTEXT(&driver_handle, this);
 
     if (uint8_t res = apds9960_init(&driver_handle); res != 0) {
       RCLCPP_FATAL(this->get_logger(), "Couldn't init APDS9960: Error = 0x%x",
@@ -169,43 +155,76 @@ private:
     return ret;
   }
 
-  static uint8_t driver_i2c_init() { return 0; }
+  static uint8_t driver_i2c_init(void* ctx) { 
+    auto* this_ = reinterpret_cast<APDS9960Node*>(ctx);
 
-  static uint8_t driver_i2c_deinit() { return 0; }
+    int i2c_fd = i2c_open(I2C_DEVICE_PATH);
+    if (i2c_fd < 0) {
+      RCLCPP_FATAL(this_->get_logger(), "Could not open i2c device");
+      exit(1);
+      return 1;
+    }
 
-  static uint8_t driver_i2c_read([[maybe_unused]] uint8_t addr, uint8_t reg,
+    this_->i2c_dev.bus = i2c_fd;
+    this_->i2c_dev.addr = I2C_DEVICE_ADDR;
+    this_->i2c_dev.iaddr_bytes = 1;
+    this_->i2c_dev.page_bytes = 256;
+
+    return 0;
+  }
+
+  static uint8_t driver_i2c_deinit(void* ctx) {
+    auto* this_ = reinterpret_cast<APDS9960Node*>(ctx);
+
+    i2c_close(this_->i2c_dev.bus);
+
+    return 0;
+  }
+
+  static uint8_t driver_i2c_read(void* ctx, [[maybe_unused]] uint8_t addr, uint8_t reg,
                                  uint8_t *buf, uint16_t len) {
-    if (i2c_ioctl_read(&APDS9960Node::i2c_dev, reg, buf, len) < 0) {
+    auto* this_ = reinterpret_cast<const APDS9960Node*>(ctx);
+
+    if (i2c_ioctl_read(&this_->i2c_dev, reg, buf, len) < 0) {
       return 1;
     }
 
     return 0;
   }
 
-  static uint8_t driver_i2c_write([[maybe_unused]] uint8_t addr, uint8_t reg,
+  static uint8_t driver_i2c_write(void* ctx, [[maybe_unused]] uint8_t addr, uint8_t reg,
                                   uint8_t *buf, uint16_t len) {
-    if (i2c_ioctl_write(&APDS9960Node::i2c_dev, reg, buf, len) < 0) {
+    auto* this_ = reinterpret_cast<const APDS9960Node*>(ctx);
+
+    if (i2c_ioctl_write(&this_->i2c_dev, reg, buf, len) < 0) {
       return 1;
     }
 
     return 0;
   }
 
-  static void driver_delay_ms(uint32_t ms) {
+  static void driver_delay_ms([[maybe_unused]] void* ctx, uint32_t ms) {
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
   }
 
-  static void driver_debug_print(const char *const fmt, ...) {
+  static void driver_debug_print(void* ctx, const char *const fmt, ...) {
     // Because this stupid driver doesn't give context to callbacks, we
     // can't get the ROS logger so just have to printf it... stupid stupid
-
+    auto* this_ = reinterpret_cast<const APDS9960Node*>(ctx);
+    
+    constexpr size_t MAX_SIZE = 1024;
+    std::string buf;
+    buf.reserve(MAX_SIZE);
+    
     va_list args;
     va_start(args, fmt);
-    vprintf(fmt, args);
+    vsnprintf(buf.data(), MAX_SIZE, fmt, args);
     va_end(args);
+
+    RCLCPP_INFO(this_->get_logger(), "%s", buf.data());
   }
 
-  static void driver_interrupt_callback([[maybe_unused]] uint8_t type) {
+  static void driver_interrupt_callback([[maybe_unused]] void *ctx, [[maybe_unused]] uint8_t type) {
     // Not using interrupts, so shouldn't have to implement this
   }
 };
