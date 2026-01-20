@@ -44,9 +44,30 @@ public:
   APDS9960Node() : Node("apds9960_node") {
     configure_driver();
 
+    this->declare_parameter<std::string>("dev_path", "/dev/i2c-7");
+    this->declare_parameter<std::string>("frame_id", "color_sensor");
+    this->declare_parameter<std::string>("topic", "/color_sensor");
+    this->declare_parameter<uint8_t>("i2c_addr", 0x39);
+
+    std::string I2C_DEVICE_PATH;
+    uint8_t I2C_DEVICE_ADDR;
+    std::string ROS_FRAME_ID;
+    std::string ROS_TOPIC_NAME;
+
+    this->get_parameter("dev_path", I2C_DEVICE_PATH);
+    this->get_parameter("i2c_addr", I2C_DEVICE_ADDR);
+    this->get_parameter("frame_id", ROS_FRAME_ID);
+    this->get_parameter("topic", ROS_TOPIC_NAME);
+
+    // display set parameters
+    RCLCPP_INFO(this->get_logger(), "dev_path: %s", I2C_DEVICE_PATH.c_str());
+    RCLCPP_INFO(this->get_logger(), "frame_id: %s", ROS_FRAME_ID.c_str());
+    RCLCPP_INFO(this->get_logger(), "topic: %s", ROS_TOPIC_NAME.c_str());
+    RCLCPP_INFO(this->get_logger(), "i2c_addr: %X\n", I2C_DEVICE_ADDR);
+
     ros_publisher = this->create_publisher<apds9960::msg::ColorProximity>(
         ROS_TOPIC_NAME, rclcpp::SensorDataQoS());
-    RCLCPP_INFO(this->get_logger(), "Started LSM6DSV16X IMU Node");
+    RCLCPP_INFO(this->get_logger(), "Started apds9960 Node");
 
     ros_timer = this->create_wall_timer(PUBLISH_PERIOD, [this] {
       if (auto x = make_message(); x != nullptr) {
