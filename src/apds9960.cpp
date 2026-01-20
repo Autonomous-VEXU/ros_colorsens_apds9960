@@ -42,7 +42,6 @@ template <std::unsigned_integral T> constexpr float uint_to_0_1_float(T val) {
 class APDS9960Node : public rclcpp::Node {
 public:
   APDS9960Node() : Node("apds9960_node") {
-    configure_driver();
 
     this->declare_parameter<std::string>("dev_path", "/dev/i2c-7");
     this->declare_parameter<std::string>("frame_id", "color_sensor");
@@ -64,6 +63,8 @@ public:
     RCLCPP_INFO(this->get_logger(), "frame_id: %s", ROS_FRAME_ID.c_str());
     RCLCPP_INFO(this->get_logger(), "topic: %s", ROS_TOPIC_NAME.c_str());
     RCLCPP_INFO(this->get_logger(), "i2c_addr: %X\n", I2C_DEVICE_ADDR);
+
+    configure_driver();
 
     ros_publisher = this->create_publisher<apds9960::msg::ColorProximity>(
         ROS_TOPIC_NAME, rclcpp::SensorDataQoS());
