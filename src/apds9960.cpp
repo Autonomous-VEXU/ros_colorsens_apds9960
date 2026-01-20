@@ -88,6 +88,11 @@ private:
   rclcpp::TimerBase::SharedPtr ros_timer;
   rclcpp::Publisher<apds9960::msg::ColorProximity>::SharedPtr ros_publisher;
 
+  std::string I2C_DEVICE_PATH;
+  uint8_t I2C_DEVICE_ADDR;
+  std::string ROS_FRAME_ID;
+  std::string ROS_TOPIC_NAME;
+
   void configure_driver() {
     DRIVER_APDS9960_LINK_INIT(&driver_handle, apds9960_handle_t);
     DRIVER_APDS9960_LINK_IIC_INIT(&driver_handle, driver_i2c_init);
@@ -188,7 +193,7 @@ private:
     }
 
     this_->i2c_dev.bus = i2c_fd;
-    this_->i2c_dev.addr = I2C_DEVICE_ADDR.c_str();
+    this_->i2c_dev.addr = this_->I2C_DEVICE_ADDR;
     this_->i2c_dev.iaddr_bytes = 1;
     this_->i2c_dev.page_bytes = 256;
 
