@@ -48,11 +48,6 @@ public:
     this->declare_parameter<std::string>("topic", "/color_sensor");
     this->declare_parameter<uint8_t>("i2c_addr", 0x39);
 
-    std::string I2C_DEVICE_PATH;
-    uint8_t I2C_DEVICE_ADDR;
-    std::string ROS_FRAME_ID;
-    std::string ROS_TOPIC_NAME;
-
     this->get_parameter("dev_path", I2C_DEVICE_PATH);
     this->get_parameter("i2c_addr", I2C_DEVICE_ADDR);
     this->get_parameter("frame_id", ROS_FRAME_ID);
@@ -185,7 +180,7 @@ private:
   static uint8_t driver_i2c_init(void* ctx) { 
     auto* this_ = reinterpret_cast<APDS9960Node*>(ctx);
 
-    int i2c_fd = i2c_open(I2C_DEVICE_PATH.c_str());
+    int i2c_fd = i2c_open(this_->I2C_DEVICE_PATH.c_str());
     if (i2c_fd < 0) {
       RCLCPP_FATAL(this_->get_logger(), "Could not open i2c device");
       exit(1);
