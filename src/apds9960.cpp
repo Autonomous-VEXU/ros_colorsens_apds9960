@@ -8,7 +8,7 @@
 #include <sys/types.h>
 #include <thread>
 
-#include "apds9960/msg/color_proximity.hpp"
+#include "ros_colorsens_apds9960/msg/color_proximity.hpp"
 #include "apds9960_cfg.hpp"
 #include "driver_apds9960.h"
 #include "i2c/i2c.h"
@@ -61,7 +61,7 @@ public:
 
     configure_driver();
 
-    ros_publisher = this->create_publisher<apds9960::msg::ColorProximity>(
+    ros_publisher = this->create_publisher<ros_colorsens_apds9960::msg::ColorProximity>(
         ROS_TOPIC_NAME, rclcpp::SensorDataQoS());
     RCLCPP_INFO(this->get_logger(), "Started apds9960 Node");
 
@@ -81,7 +81,7 @@ private:
   I2CDevice i2c_dev;
   apds9960_handle_t driver_handle;
   rclcpp::TimerBase::SharedPtr ros_timer;
-  rclcpp::Publisher<apds9960::msg::ColorProximity>::SharedPtr ros_publisher;
+  rclcpp::Publisher<ros_colorsens_apds9960::msg::ColorProximity>::SharedPtr ros_publisher;
 
   std::string I2C_DEVICE_PATH;
   uint8_t I2C_DEVICE_ADDR;
@@ -135,7 +135,7 @@ private:
     RCLCPP_INFO(this->get_logger(), "Successfully configured APDS9960");
   }
 
-  std::unique_ptr<apds9960::msg::ColorProximity> make_message() {
+  std::unique_ptr<ros_colorsens_apds9960::msg::ColorProximity> make_message() {
     uint8_t apds_status;
     apds9960_get_status(&driver_handle, &apds_status);
     if (!(apds_status & (1 << APDS9960_STATUS_AVALID))) {
@@ -144,7 +144,7 @@ private:
       return nullptr;
     }
 
-    auto ret = std::make_unique<apds9960::msg::ColorProximity>();
+    auto ret = std::make_unique<ros_colorsens_apds9960::msg::ColorProximity>();
     ret->header.stamp = this->get_clock()->now();
     ret->header.frame_id = ROS_FRAME_ID;
 
